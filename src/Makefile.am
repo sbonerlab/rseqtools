@@ -85,7 +85,7 @@ export2fastq_SOURCES = export2fastq.c
 export2fastq_LDADD = -lmrf -lbios
 
 mergeTranscripts_SOURCES = mergeTranscripts.c
-mergeTranscripts_LDADD = -lmrf.la -lm -lbios
+mergeTranscripts_LDADD = -lmrf -lm -lbios
 
 interval2gff_SOURCES = interval2gff.c
 interval2gff_LDADD = -lmrf -lm -lbios
