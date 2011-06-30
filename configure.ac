@@ -2,13 +2,15 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.59])
-AC_INIT([rseqtools], [1.0.0], [david.chen@yale.edu])
+AC_INIT([rseqtools], [0.7.0], [david.chen@yale.edu])
 AC_CONFIG_SRCDIR([src/mrfSelectAnnotated.c])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([config.h])
 
 AM_INIT_AUTOMAKE([-Wall -Werror])
 LT_INIT
+
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 # Checks for programs.
 AC_PROG_CC

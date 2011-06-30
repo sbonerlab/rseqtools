@@ -21,100 +21,102 @@
 
 
 
-static void printMrfAlignBlocks (SamEntry *e, int _strand)
+static void printMrfAlignBlocks(SamEntry *e, int _strand)
 {
-  char strand = '.';
-  int len, intronic;
-  int q, pos;
-  int i;
-  Texta tokens;
+	char strand = '.';
+	int len, intronic;
+	int q, pos;
+	int i;
+	Texta tokens;
 
-  tokens = textFieldtokP (e->cigar, "MN");
+	tokens = textFieldtokP(e->cigar, "MN");
 
-  if (_strand == R_FIRST) {
-    if (e->flags & S_QUERY_STRAND)
-      strand = '-';
-    else
-      strand = '+';
-  } else {
-    if (e->flags & S_MATE_STRAND)
-      strand = '-';
-    else
-      strand = '+';
-  }
+	if (_strand == R_FIRST) {
+		if (e->flags & S_QUERY_STRAND)
+			strand = '-';
+		else
+			strand = '+';
+	} else {
+		if (e->flags & S_MATE_STRAND)
+			strand = '-';
+		else
+			strand = '+';
+	}
 
-  // Process first item in cigar
-  len = atoi (textItem (tokens, 0));
-  pos = e->pos;
-  q   = 1;
-  printf ("%s:%c:%d:%d:%d:%d",
-          e->rname, strand, e->pos, pos + len - 1, 1, len);
-  pos += len - 1;
-  q += len;
+	// Process first item in cigar
+	len = atoi(textItem(tokens, 0));
+	pos = e->pos;
+	q   = 1;
+	printf("%s:%c:%d:%d:%d:%d",
+	       e->rname, strand, e->pos, pos + len - 1, 1, len);
+	pos += len - 1;
+	q += len;
 
-  // Process rest of cigar
-  if (arrayMax (tokens) > 2) {
-    for (i = 2; i < arrayMax (tokens) - 1; i += 2) {
-      len = atoi (textItem (tokens, i));
-      intronic = atoi (textItem (tokens, i - 1));
-      pos += intronic + 1;
-      printf(",%s:%c:%d:%d:%d:%d",
-             e->rname, strand, pos, pos + len - 1, q, q + len - 1);
-      pos += len - 1;
-      q += len;
-    }
-  }
+	// Process rest of cigar
+	if (arrayMax(tokens) > 2) {
+		for (i = 2; i < arrayMax(tokens) - 1; i += 2) {
+			len = atoi(textItem(tokens, i));
+			intronic = atoi(textItem(tokens, i - 1));
+			pos += intronic + 1;
+			printf(",%s:%c:%d:%d:%d:%d",
+			       e->rname, strand, pos, pos + len - 1, q, q + len - 1);
+			pos += len - 1;
+			q += len;
+		}
+	}
 
-  textDestroy (tokens);
+	textDestroy(tokens);
 }
 
 
 
-int generateSamEntry ( Texta tokens, SamEntry *currSamE, 
-		       int* hasSeqs, 
-		       int* hasQual)
+int generateSamEntry(Texta tokens, 
+		     SamEntry *currSamE, 
+		     int* hasSeqs, 
+		     int* hasQual)
 {
-  int j;
-  currSamE->qname = strdup (textItem (tokens, 0));
-  currSamE->flags = atoi (textItem (tokens, 1));
-  currSamE->rname = strdup (textItem (tokens, 2));
-  currSamE->pos   = atoi (textItem (tokens, 3));
-  currSamE->mapq  = atoi (textItem (tokens, 4));
-  currSamE->cigar = strdup (textItem (tokens, 5));
-  currSamE->mrnm  = strdup (textItem (tokens, 6));
-  currSamE->mpos  = atoi (textItem (tokens, 7));
-  currSamE->isize = atoi (textItem (tokens, 8));
-  currSamE->seq   = NULL;
-  currSamE->qual  = NULL;
-  currSamE->tags  = NULL;
+	int j;
+
+	currSamE->qname = strdup(textItem(tokens, 0));
+	currSamE->flags = atoi(textItem(tokens, 1));
+	currSamE->rname = strdup(textItem(tokens, 2));
+	currSamE->pos   = atoi(textItem(tokens, 3));
+	currSamE->mapq  = atoi(textItem(tokens, 4));
+	currSamE->cigar = strdup(textItem(tokens, 5));
+	currSamE->mrnm  = strdup(textItem(tokens, 6));
+	currSamE->mpos  = atoi(textItem(tokens, 7));
+	currSamE->isize = atoi(textItem(tokens, 8));
+	currSamE->seq   = NULL;
+	currSamE->qual  = NULL;
+	currSamE->tags  = NULL;
   
-  // Skip if unmapped or fails platform/vendor checks
-  if (currSamE->flags & S_QUERY_UNMAPPED ||
-      currSamE->flags & S_MATE_UNMAPPED ||
-      currSamE->flags & S_FAILS_CHECKS)
-    return 0;
+	// Skip if unmapped or fails platform/vendor checks
+	if (currSamE->flags & S_QUERY_UNMAPPED ||
+	    currSamE->flags & S_MATE_UNMAPPED ||
+	    currSamE->flags & S_FAILS_CHECKS)
+		return 0;
   
-  // Get tokens
-  if (arrayMax (tokens) > 11) {
-    Stringa tags = stringCreate (10);
-    for (j = 11; j < arrayMax (tokens); j++) {
-      if (j > 11)
-	stringAppendf (tags, "\t");
-      stringAppendf (tags, "%s", textItem (tokens, j));
-    }
-    currSamE->tags = strdup (string(tags));
-    stringDestroy (tags);
-  }
+	// Get tokens
+	if (arrayMax (tokens) > 11) {
+		Stringa tags = stringCreate (10);
+		for (j = 11; j < arrayMax (tokens); j++) {
+			if (j > 11)
+				stringAppendf (tags, "\t");
+			stringAppendf (tags, "%s", textItem (tokens, j));
+		}
+		currSamE->tags = strdup (string(tags));
+		stringDestroy (tags);
+	}
   
-  if (strcmp (textItem (tokens, 9),  "*") != 0) {
-    *hasSeqs = 1;
-    currSamE->seq = strdup (textItem (tokens, 9));
-  }
-  if (strcmp (textItem (tokens, 10), "*") != 0) {
-    *hasQual = 1;
-    currSamE->qual = strdup (textItem (tokens, 10));
-  }
-  return 1;
+	if (strcmp (textItem (tokens, 9),  "*") != 0) {
+		*hasSeqs = 1;
+		currSamE->seq = strdup (textItem (tokens, 9));
+	}
+	if (strcmp (textItem (tokens, 10), "*") != 0) {
+		*hasQual = 1;
+		currSamE->qual = strdup (textItem (tokens, 10));
+	}
+	return 1;
 }
 
 
