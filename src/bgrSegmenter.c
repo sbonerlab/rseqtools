@@ -15,6 +15,7 @@
 int main (int argc, char *argv[])
 {
   Stringa buffer;
+  static Stringa cmd=NULL;
   LineStream ls1,ls2;
   char *fileName;
   char *targetName;
@@ -37,10 +38,16 @@ int main (int argc, char *argv[])
   buffer = stringCreate (100);
   tars = arrayCreate (1000000,Tar);
   wigs = arrayCreate (250000000,Wig);
-  stringPrintf (buffer,"ls -1 %s*.bgr",argv[1]);
+  stringPrintf (buffer,"ls -1 %s*.bgr*",argv[1]);
   ls1 = ls_createFromPipe (string (buffer));
   while (fileName = ls_nextLine (ls1)) {
-    ls2 = ls_createFromFile (fileName);
+    stringCreateClear(cmd , 20
+);
+    if ( strEndsWith( fileName, ".gz" ) ) 
+      stringPrintf( cmd, "zcat %s", fileName );
+    else
+      stringPrintf( cmd, "cat %s", fileName );
+    ls2 = ls_createFromPipe( string(cmd) ); //    ls2 = ls_createFromFile (fileName);
     ls_nextLine (ls2); // discard track name line
     int prevEnd = 0;
     while (line = ls_nextLine (ls2)) {
