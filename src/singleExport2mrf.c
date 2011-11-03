@@ -115,7 +115,7 @@ int main (int argc, char *argv[])
       *pos = '\0';
       printf ("%s:%c:%d:%d:1:%d\n",chromosome,convertStrand (strand),position,position + readLength - 1,readLength);
     } 
-    else if (strstr (chromosome,"splice") != NULL) {
+    else if( (strstr (chromosome,"splice") != NULL) || (strstr (chromosome,"junction") != NULL) ) {
       w = wordIterCreate (contig,"|",0);
       strReplace (&chromosome,wordNext (w));
       startFirstExon = atoi (wordNext (w));
