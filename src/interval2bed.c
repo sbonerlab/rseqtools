@@ -50,7 +50,7 @@ int main (int argc, char *argv[])
 	  stringAppendf(starts, "," );
 	}
       }
-      printf ("%s\t%d\t%d\t%s\t900\t%c\t%d\t%d\t255,0,0\t%d\t%s\t%s\n",
+      printf ("%s\t%d\t%d\t%s\t900\t%c\t%d\t%d\t.\t%d\t%s\t%s\n",
 	      currInterval->chromosome,currInterval->start,currInterval->end, currInterval->name,currInterval->strand, currInterval->start, currInterval->end, currInterval->subIntervalCount, string(sizes), string(starts) );
     }
   }
