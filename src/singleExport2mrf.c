@@ -113,7 +113,7 @@ int main (int argc, char *argv[])
     if (strStartsWith (chromosome,"chr")) {
       pos = strchr (chromosome,'.');	  
       *pos = '\0';
-      printf ("%s:%c:%d:%d:1:%d\n",chromosome,convertStrand (strand),position,position + readLength - 1,readLength);
+      printf ("%s:%c:%d:%d:1:%d\t%s\t%s\n",chromosome,convertStrand (strand),position,position + readLength - 1,readLength, read, quality);
     } 
     else if( (strstr (chromosome,"splice") != NULL) || (strstr (chromosome,"junction") != NULL) ) {
       w = wordIterCreate (contig,"|",0);
@@ -132,13 +132,15 @@ int main (int argc, char *argv[])
               1,
               numNucleotidesFirstExon);
       printf (",");
-      printf ("%s:%c:%d:%d:%d:%d\n",
+      printf ("%s:%c:%d:%d:%d:%d\t%s\t%s\n",
               chromosome,
               convertStrand (strand),
               startSecondExon + 1,
               startSecondExon + 1 + numNucleotidesSecondExon - 1,
               numNucleotidesFirstExon + 1,
-              readLength);
+              readLength,
+	      read,
+	      quality);
     }
     else if (strstr (chromosome,"spike") != NULL) {
       printf ("%s:%c:%d:%d:1:%d\n",contig,convertStrand (strand),position,position + readLength - 1,readLength);
