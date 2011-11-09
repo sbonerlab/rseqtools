@@ -1,3 +1,6 @@
 SUBDIRS = src
 ACLOCAL_AMFLAGS = -I m4
 EXTRA_DIST = m4
+
+debug:
+	$(MAKE) all "CFLAGS=-g -DDEBUG " $(AM_MAKEFLAGS)
