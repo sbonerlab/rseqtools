@@ -20,6 +20,7 @@ bin_PROGRAMS = psl2mrf \
 	       mergeTranscripts \
 	       interval2gff \
 	       interval2sequences \
+	       intervalSize \
 	       bed2interval \
 	       interval2bed \
 	       mrf2sam \
@@ -92,6 +93,9 @@ interval2gff_LDADD = -lmrf -lm -lbios
 
 interval2sequences_SOURCES = interval2sequences.c
 interval2sequences_LDADD = -lmrf -lm -lbios
+
+intervalSize_SOURCES = intervalSize.c
+intervalSize_LDADD = -lmrf -lm -lbios
 
 bed2interval_SOURCES = bed2interval.c
 bed2interval_LDADD = -lmrf -lm -lbios
