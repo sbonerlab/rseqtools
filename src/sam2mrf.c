@@ -73,7 +73,7 @@ static void printMrfAlignBlocks(SamEntry *e, int _strand)
 int generateSamEntry(Texta tokens, 
 		     SamEntry *currSamE, 
 		     int* hasSeqs, 
-		     int* hasQual)
+		     int* hasQual		     )
 {
 	int j;
 
@@ -151,6 +151,10 @@ int main (int argc, char **argv)
   int hasQual = 0;
   int hasSeqs = 0;
   int start=1;
+
+  char delim = '\0';
+  if( argc == 2 ) 
+    delim=argv[1][0];
  
   ls = ls_createFromFile ("-");
   while (line = ls_nextLine (ls)) {
@@ -193,7 +197,14 @@ int main (int argc, char **argv)
 	freeMem( mateSamE );
 	continue;
       }
-      if (strcmp (currSamE->qname, mateSamE->qname) != 0) {
+      char* pos = strchr( currSamE->qname, delim);
+      if( *pos != '\0' )
+	*pos='\0';
+      pos = strchr( mateSamE->qname, delim);
+      if( *pos != '\0' )
+	*pos='\0';
+      
+      if ( !strEqual ( currSamE->qname, mateSamE->qname) ) {
         die ("Please note that for paired-end data, sam2mrf requires the mate pairs to be on subsequent lines. You may want to sort the SAM file first.\nEx: sort -r file.sam | sam2mrf > file.mrf\n");
       }
     } 
