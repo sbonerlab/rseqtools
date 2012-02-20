@@ -35,8 +35,8 @@ int main (int argc, char *argv[])
     if( argc == 3 ) {
       for (j = 0; j < arrayMax (currInterval->subIntervals); j++) {
 	currSubInterval = arrp (currInterval->subIntervals,j,SubInterval);
-	printf ("%s\t%d\t%d\t%s\t900\t%c\n",
-		currInterval->chromosome,currSubInterval->start,currSubInterval->end,currInterval->name,currInterval->strand);
+	printf ("%s\t%d\t%d\t%s_%d\t900\t%c\t%d\t%d\t.\t1\t%d\t0\n",
+		currInterval->chromosome,currSubInterval->start,currSubInterval->end,currInterval->name,j+1,currInterval->strand, currSubInterval->start, currSubInterval->end,  currSubInterval->end - currSubInterval->start  );
       }
     } else {
       stringCreateClear( starts, 10);
