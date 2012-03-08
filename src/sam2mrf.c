@@ -134,6 +134,14 @@ void destroySamEntry ( SamEntry* currSamE ) {
     free (currSamE->tags);
 }
 
+int isMateUnmapped( SamEntry* samE ) 
+{
+  if( samE->flags & S_MATE_UNMAPPED )
+    return 1;
+  else
+    return 0;
+}
+
 int isPaired( SamEntry* samE )
 {
   if( samE->flags & S_READ_PAIRED )  
@@ -177,7 +185,7 @@ int main (int argc, char **argv)
     int ret = generateSamEntry( tokens, currSamE, &hasSeqs, &hasQual );
     textDestroy( tokens );
     if ( ret==0 ) {
-      if ( isPaired ( currSamE ) )
+      if ( isPaired ( currSamE ) && !isMateUnmapped( currSamE ) )
 	ls_nextLine( ls ); // discarding next entry too (the mate)
       destroySamEntry( currSamE );
       freeMem( currSamE );
