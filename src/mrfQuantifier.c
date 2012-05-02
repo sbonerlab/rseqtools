@@ -188,8 +188,8 @@ int main (int argc, char *argv[])
   int mode;
   long int totalNumNucleotides; 
 
-  if (argc != 3) {
-    usage ("%s <file.annotation> <singleOverlap|multipleOverlap>",argv[0]);
+  if (argc < 4) {
+    usage ("%s <file.annotation> <singleOverlap|multipleOverlap> [doNotNorm]",argv[0]);
   }
   if (strEqual (argv[2],"singleOverlap")) {
     mode = MODE_SINGLE_OVERLAP;
@@ -198,8 +198,11 @@ int main (int argc, char *argv[])
     mode = MODE_MULTIPLE_OVERLAP;
   }
   else {
-    usage ("%s <file.annotation> <singleOverlap|multipleOverlap>",argv[0]);
+     usage ("%s <file.annotation> <singleOverlap|multipleOverlap> [doNotNorm]",argv[0]);
   }
+  short unsigned int counts=0;
+  if( strEqual( argv[3], "doNotNorm") )
+      counts=1;
   intervalFind_addIntervalsToSearchSpace (argv[1],0);
   intervalPointers = intervalFind_getIntervalPointers ();
   arraySort (intervalPointers,(ARRAYORDERF)sortTranscriptsPointers);
@@ -243,7 +246,10 @@ int main (int argc, char *argv[])
     testTranscriptEntry.transcript->name = hlr_strdup (currTranscript->name);
     if (arrayFind (transcriptEntries,&testTranscriptEntry,&index,(ARRAYORDERF)sortTranscriptEntriesByTranscriptName)) {
       currTranscriptEntry = arrp (transcriptEntries,index,TranscriptEntry);
-      printf ("%s\t%f\n",currTranscriptEntry->transcript->name,currTranscriptEntry->overlap / (transcriptLength * factor) * 1000.0);
+      if ( counts == 0 )
+	printf ("%s\t%f\n",currTranscriptEntry->transcript->name,currTranscriptEntry->overlap / (transcriptLength * factor) * 1000.0);
+      else
+	printf ("%s\t%d\n",currTranscriptEntry->transcript->name,currTranscriptEntry->overlap );
     }
     else {
       die ("Expected to find transcript name");
