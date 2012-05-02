@@ -6,7 +6,7 @@
 
 /** 
  *   \file mrf2gff.c Module to convert MRF to GFF.
- *         Usage: mrf2gff <prefix> \n
+ *         Usage: mrf2gff <prefix> <paired> \n
  *         Creates a GFF file of reads that have more than one alignment block (spliced reads). \n
  *         Takes MRF from STDIN. \n
  */
@@ -32,30 +32,37 @@ static int sortGffEntriesByTargetNameAndGroupNumber (GffEntry *a, GffEntry *b)
   return a->groupNumber - b->groupNumber;
 }
 
-
-
-static void processRead (Array gffEntries, MrfRead *currRead, int *groupNumber) 
-{
+static void createGffEntry( Array gffEntries, MrfRead *currRead, int groupNumber ) {
   int i;
   MrfBlock *currBlock;
   GffEntry *currGffEntry;
   static Stringa buffer = NULL;
-
-  if (arrayMax (currRead->blocks) == 1) {
-    return;
-  }
   stringCreateClear (buffer,100);
   for (i = 0; i < arrayMax (currRead->blocks); i++) {
     currBlock = arrp (currRead->blocks,i,MrfBlock);
     currGffEntry = arrayp (gffEntries,arrayMax (gffEntries),GffEntry);
-    stringPrintf (buffer,"%s\tMRF\tfeature\t%d\t%d\t.\t%c\t.\tTG%d",
+    stringPrintf (buffer,"%s\tMRF\texon\t%d\t%d\t.\t%c\t.\tTG%d",
                   currBlock->targetName,
                   currBlock->targetStart,
                   currBlock->targetEnd,
                   currBlock->strand,
-                  *groupNumber);
+                  groupNumber);
     currGffEntry->targetName = hlr_strdup (currBlock->targetName);
     currGffEntry->line = hlr_strdup (string (buffer));
+  }
+}
+
+static void processRead (Array gffEntries, MrfEntry *currEntry, int *groupNumber) 
+{
+   if( !currEntry->isPairedEnd ) { // single entry,
+    if( arrayMax (currEntry->read1.blocks) == 1 )  // no splice
+      return;
+    else { // with splice
+      createGffEntry( gffEntries, &(currEntry->read1), *groupNumber );
+    }
+  } else { // paired entry
+     createGffEntry( gffEntries, &(currEntry->read1), *groupNumber );
+     createGffEntry( gffEntries, &(currEntry->read2), *groupNumber );
   }
   (*groupNumber)++;
 }
@@ -70,20 +77,17 @@ int main (int argc, char *argv[])
   Array gffEntries;
   FILE *fp;
   Stringa buffer;
+  short int paired;
 
   if (argc != 2) {
     usage ("%s <prefix>",argv[0]);
   }
-
   buffer = stringCreate (1000);
   groupNumber = 0;
   mrf_init ("-");
   gffEntries = arrayCreate (100000,GffEntry);
   while (currEntry = mrf_nextEntry ()) {
-    processRead (gffEntries,&currEntry->read1,&groupNumber);
-    if (currEntry->isPairedEnd) {
-      processRead (gffEntries,&currEntry->read2,&groupNumber);
-    }
+    processRead (gffEntries, currEntry, &groupNumber);
   }
   mrf_deInit ();
 
