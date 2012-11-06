@@ -29,7 +29,8 @@ bin_PROGRAMS = psl2mrf \
 	       bgrQuantifier \
 	       bgrSegmenter \
 	       mrfCountRegion \
-	       mrfSubsetByGenes
+	       mrfSubsetByGenes \
+	       mrfSorter
 
 psl2mrf_SOURCES = psl2mrf.c
 psl2mrf_LDADD = -lmrf -lbios
@@ -124,3 +125,5 @@ mrfCountRegion_LDADD = -lmrf -lm -lbios
 mrfSubsetByGenes_SOURCES = mrfSubsetByGenes.c
 mrfSubsetByGenes_LDADD = -lmrf -lm -lbios
 
+mrfSorter_SOURCES = mrfSorter.c
+mrfSorter_LDADD = -lmrf -lm -lbios
