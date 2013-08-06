@@ -30,7 +30,8 @@ bin_PROGRAMS = psl2mrf \
 	       bgrSegmenter \
 	       mrfCountRegion \
 	       mrfSubsetByGenes \
-	       mrfSorter
+	       mrfSorter \
+	       fixSam	
 
 psl2mrf_SOURCES = psl2mrf.c
 psl2mrf_LDADD = -lmrf -lbios
@@ -127,3 +128,6 @@ mrfSubsetByGenes_LDADD = -lmrf -lm -lbios
 
 mrfSorter_SOURCES = mrfSorter.c
 mrfSorter_LDADD = -lmrf -lm -lbios
+
+fixSam_SOURCES = fixSam.c
+fixSam_LDADD = -lmrf -lm -lbios
