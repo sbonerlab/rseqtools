@@ -188,7 +188,7 @@ int main (int argc, char *argv[])
   int mode;
   long int totalNumNucleotides; 
 
-  if (argc < 4) {
+  if (argc < 3) {
     usage ("%s <file.annotation> <singleOverlap|multipleOverlap> [doNotNorm]",argv[0]);
   }
   if (strEqual (argv[2],"singleOverlap")) {
@@ -201,7 +201,7 @@ int main (int argc, char *argv[])
      usage ("%s <file.annotation> <singleOverlap|multipleOverlap> [doNotNorm]",argv[0]);
   }
   short unsigned int counts=0;
-  if( strEqual( argv[3], "doNotNorm") )
+  if( argc==4 && strEqual( argv[3], "doNotNorm") )
       counts=1;
   intervalFind_addIntervalsToSearchSpace (argv[1],0);
   intervalPointers = intervalFind_getIntervalPointers ();
