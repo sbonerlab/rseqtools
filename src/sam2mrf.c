@@ -89,11 +89,25 @@ int generateSamEntry(Texta tokens,
 	currSamE->seq   = NULL;
 	currSamE->qual  = NULL;
 	currSamE->tags  = NULL;
-  
+
+	/*	printf( "READ_PAIRED:\t%s\nPAIR_MAPPED:\t%s\nQUERY_UNMAPPED:\t%s\nMATE_UNMAPPED:\t%s\nQUERY_STRAND:\t%s\nMATE_STRAND:\t%s\nFIRST:\t\t%s\nSECOND:\t\t%s\nNOT_PRIMARY:\t%s\nFAILS_CHECK:\t%s\nDUPLICATE:\t%s\n", 
+		(currSamE->flags & S_READ_PAIRED)?"paired":"single",
+		(currSamE->flags & S_PAIR_MAPPED)?"yes":"no",
+		(currSamE->flags & S_QUERY_UNMAPPED)?"unmapped":"mapped",
+		(currSamE->flags & S_MATE_UNMAPPED)?"unmapped":"mapped",
+		(currSamE->flags & S_QUERY_STRAND)?"forward":"reverse",
+		(currSamE->flags & S_MATE_STRAND)?"forward":"reverse",
+		(currSamE->flags & S_FIRST)?"yes":"no",
+		(currSamE->flags & S_SECOND)?"yes":"no",
+		(currSamE->flags & S_NOT_PRIMARY)?"yes":"no",
+		(currSamE->flags & S_FAILS_CHECKS)?"yes":"no",
+		(currSamE->flags & S_DUPLICATE)?"yes":"no" );  // USED FOR DEBUG ONLY */ 
+
 	// Skip if unmapped or fails platform/vendor checks
 	if (currSamE->flags & S_QUERY_UNMAPPED ||
 	    currSamE->flags & S_MATE_UNMAPPED ||
-	    currSamE->flags & S_FAILS_CHECKS)
+	    currSamE->flags & S_FAILS_CHECKS || 
+	    currSamE->flags & S_NOT_PRIMARY )
 		return 0;
   
 	// Get tokens
@@ -150,6 +164,26 @@ int isPaired( SamEntry* samE )
     return 0;
 }
 
+int isValidSamLine( Texta tokens ) {
+  if (arrayMax (tokens) < 11) {
+    textDestroy( tokens );
+    return 0;
+  } else return 1;
+}
+
+int haveSameName( SamEntry *query, SamEntry *mate, char delim) {
+  char* pos = strchr( query->qname, delim);
+  if( *pos != '\0' )
+    *pos='\0';
+  pos = strchr( mate->qname, delim);
+  if( *pos != '\0' )
+    *pos='\0';
+  if( strEqual ( query->qname, mate->qname) )
+    return 1;
+  else 
+    return 0;
+}
+
 int main (int argc, char **argv)
 {
   LineStream ls;
@@ -165,6 +199,7 @@ int main (int argc, char **argv)
     delim=argv[1][0];
  
   ls = ls_createFromFile ("-");
+  ls_bufferSet( ls, 1);
   while (line = ls_nextLine (ls)) {
     // Put all the lines of the SAM header in comments
     if (line[0] == '@') {
@@ -173,11 +208,11 @@ int main (int argc, char **argv)
     }
     // Parse each SAM entry and store into array   
     tokens = textFieldtokP (line, "\t");
-    if (arrayMax (tokens) < 11) {
-      textDestroy( tokens );
-      ls_destroy (ls);
-      die ("Invalid SAM entry: %s", line);
+    if( isValidSamLine( tokens ) != 1 ) {
+	  ls_destroy (ls);
+	  die ("Invalid SAM entry: %s", line);
     }
+ 
     SamEntry *currSamE = NULL;
     SamEntry *mateSamE = NULL;
     AllocVar(currSamE ); 
@@ -185,8 +220,26 @@ int main (int argc, char **argv)
     int ret = generateSamEntry( tokens, currSamE, &hasSeqs, &hasQual );
     textDestroy( tokens );
     if ( ret==0 ) {
-      if ( isPaired ( currSamE ) && !isMateUnmapped( currSamE ) )
-	ls_nextLine( ls ); // discarding next entry too (the mate)
+      if ( isPaired ( currSamE ) ) { // only if paired
+ 
+	line = ls_nextLine( ls ); // discarding next entry too (the mate) if same name
+	if( ls_isEof( ls ) ) {
+	  destroySamEntry( currSamE );
+	  freeMem(currSamE );
+	  continue;	 
+	}
+	tokens = textFieldtokP (line, "\t");
+	if( isValidSamLine( tokens ) != 1 ) {
+	  ls_destroy (ls);
+	  die ("Invalid SAM entry: %s", line);
+	}
+	AllocVar( mateSamE );
+	ret = generateSamEntry( tokens, mateSamE, &hasSeqs, &hasQual ); 
+	if( !haveSameName( currSamE, mateSamE, delim ) ) // it's part of another pair
+	  ls_back( ls, 1 ); // reloading the line
+	destroySamEntry( mateSamE );
+	freeMem( mateSamE );
+      }
       destroySamEntry( currSamE );
       freeMem( currSamE );
       continue;
@@ -198,21 +251,15 @@ int main (int argc, char **argv)
       secondEnd = textFieldtok (ls_nextLine( ls ) , "\t");
       ret = generateSamEntry( secondEnd, mateSamE, &hasSeq2, &hasQual2 );
       textDestroy( secondEnd );
-      if( ret == 0 ) {
+      if( ret == 0 ) { // this should have been taken care already with the analysis of the first end
 	destroySamEntry( currSamE );
 	destroySamEntry( mateSamE );
 	freeMem( currSamE );
 	freeMem( mateSamE );
 	continue;
       }
-      char* pos = strchr( currSamE->qname, delim);
-      if( *pos != '\0' )
-	*pos='\0';
-      pos = strchr( mateSamE->qname, delim);
-      if( *pos != '\0' )
-	*pos='\0';
       
-      if ( !strEqual ( currSamE->qname, mateSamE->qname) ) {
+      if ( !haveSameName( currSamE, mateSamE, delim ) ) {
         die ("Please note that for paired-end data, sam2mrf requires the mate pairs to be on subsequent lines. You may want to sort the SAM file first.\nEx: sort -r file.sam | sam2mrf > file.mrf\n");
       }
     } 
