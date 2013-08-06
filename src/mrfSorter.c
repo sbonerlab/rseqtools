@@ -9,8 +9,8 @@
 
 
 /** 
- *   \file mrfSorter.c Module to sample reads from MRF.
- *         Usage: mrfSampler <proportionOfReadsToSample> \n
+ *   \file mrfSorter.c Module to properly reorder the MRF reads, with the first mate on the leftmost position (if same chromosome; otherwise smaller - alphabetically - chromosome ).
+ *         Usage: mrfSorter \n
  *         Takes MRF from STDIN. \n
  */
 
@@ -63,6 +63,8 @@ int swapReads( MrfRead *read1, MrfRead *read2 ) {
    copyRead( read1, tmpRead );
    copyRead( read2, read1 );
    copyRead( tmpRead, read2 );
+   hlr_free(tmpRead->sequence);
+   hlr_free(tmpRead->qualityScores);
    free(tmpRead);
    return 0;
 }
