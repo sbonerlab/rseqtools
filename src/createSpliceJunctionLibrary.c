@@ -93,6 +93,7 @@ int main (int argc, char *argv[])
   headers = textCreate (1000000);
   for (i = 0; i < arrayMax (junctions); i++) {
     currJunction = arrp (junctions,i,Junction);
+    if( currJunction->firstExonEnd - sizeExonOverlap < 0 ) continue;
     fprintf (fp,"%s:%d-%d\n",currJunction->chromosome,currJunction->firstExonEnd - sizeExonOverlap,currJunction->firstExonEnd);
     fprintf (fp,"%s:%d-%d\n",currJunction->chromosome,currJunction->secondExonStart,currJunction->secondExonStart + sizeExonOverlap);
     stringPrintf (buffer,"%s|%d|%d|%d",currJunction->chromosome,currJunction->firstExonEnd - sizeExonOverlap,currJunction->secondExonStart,sizeExonOverlap);
