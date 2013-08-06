@@ -41,11 +41,11 @@ static void createGffEntry( Array gffEntries, MrfRead *currRead, int groupNumber
   for (i = 0; i < arrayMax (currRead->blocks); i++) {
     currBlock = arrp (currRead->blocks,i,MrfBlock);
     currGffEntry = arrayp (gffEntries,arrayMax (gffEntries),GffEntry);
-    stringPrintf (buffer,"%s\tMRF\texon\t%d\t%d\t.\t%c\t.\tTG%d",
+    stringPrintf (buffer,"%s\tMRF\texon\t%d\t%d\t.\t.\t.\tTG%d",
                   currBlock->targetName,
                   currBlock->targetStart,
                   currBlock->targetEnd,
-                  currBlock->strand,
+                  //currBlock->strand,
                   groupNumber);
     currGffEntry->targetName = hlr_strdup (currBlock->targetName);
     currGffEntry->line = hlr_strdup (string (buffer));
