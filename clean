@@ -1,5 +1,7 @@
 #!/bin/bash
 
+make distclean
+
 echo autoclean: cleaning root
 rm -rf aclocal.m4 \
        autom4te.cache \
