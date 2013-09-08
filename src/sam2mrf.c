@@ -170,21 +170,15 @@ int haveSameName(SamEntry *query, SamEntry *mate, char delim) {
 }
 
 int main (int argc, char **argv) {
-  LineStream ls;
-  Texta tokens = NULL;
-  char *line;
-
-  int hasQual = 0;
-  int hasSeqs = 0;
-  int start=1;
-
   char delim = '\0';
   if (argc == 2) {
     delim = argv[1][0];
   }
  
-  ls = ls_createFromFile("-");
+  LineStream ls = ls_createFromFile("-");
   ls_bufferSet(ls, 1);
+  char *line = NULL;
+  int start = 1;
   while (line = ls_nextLine(ls)) {
     // Put all the lines of the SAM header in comments
     if (line[0] == '@') {
@@ -192,7 +186,7 @@ int main (int argc, char **argv) {
       continue;
     }
     // Parse each SAM entry and store into array   
-    tokens = textFieldtokP(line, "\t");
+    Texta tokens = textFieldtokP(line, "\t");
     if (isValidSamLine(tokens) != 1) {
       ls_destroy(ls);
       die("Invalid SAM entry: %s", line);
@@ -202,6 +196,8 @@ int main (int argc, char **argv) {
     SamEntry *mateSamE = NULL;
     AllocVar(currSamE);
 
+    int hasQual = 0;
+    int hasSeqs = 0;
     int ret = generateSamEntry(tokens, currSamE, &hasSeqs, &hasQual);
     textDestroy(tokens);
     if (ret == 0) {
