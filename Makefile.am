@@ -1,6 +1,7 @@
 AM_MAKEFLAGS = --no-print-directory
-AM_CPPFLAGS = \
-	-I${top_srcdir}/src
+AM_CPPFLAGS = -I${top_srcdir}/src
+AM_CFLAGS = -std=c99
+
 
 bin_PROGRAMS = \
 	src/psl2mrf \

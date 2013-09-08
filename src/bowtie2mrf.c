@@ -1,3 +1,7 @@
+#define _GNU_SOURCE
+
+#include <string.h>
+
 #include <bios/log.h>
 #include <bios/format.h>
 #include <bios/bowtieParser.h>
