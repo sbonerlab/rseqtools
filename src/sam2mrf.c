@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <bios/format.h>
 #include <bios/log.h>
@@ -19,46 +20,57 @@
 #define R_FIRST     0
 #define R_SECOND    1
 
-static void printMrfAlignBlocks(SamEntry *entry, int strand) {
+static char samStrandToMrfStrand(SamEntry* sam_entry, char sam_strand) {
   char mrf_strand = '.';
-  Texta tokens = textFieldtokP(entry->cigar, "MN");
-  if (strand == R_FIRST) {
-    if (entry->flags & S_QUERY_STRAND) {
+  if (sam_strand == R_FIRST) {
+    if (sam_entry->flags & S_QUERY_STRAND) {
       mrf_strand = '-';
     } else {
       mrf_strand = '+';
     }
   } else {
-    if (entry->flags & S_MATE_STRAND) {
+    if (sam_entry->flags & S_MATE_STRAND) {
       mrf_strand = '-';
     } else {
       mrf_strand = '+';
     }
   }
+  return mrf_strand;
+}
 
-  // Process first item in cigar
-  int len = atoi(textItem(tokens, 0));
-  int pos = entry->pos;
-  int q = 1;
-  printf("%s:%c:%d:%d:%d:%d",
-         entry->rname, mrf_strand, entry->pos, pos + len - 1, 1, len);
-  pos += len - 1;
-  q += len;
+static void printMrfAlignBlocks(SamEntry *sam_entry, int sam_strand) {
+  // Parse CIGAR string.
+  // TODO: CIGAR should be parsed when SAM entry is parsed.
+  Array cigar_operations = samParser_getCigar(sam_entry->cigar);
 
-  // Process rest of cigar
-  if (arrayMax(tokens) > 2) {
-    for (int i = 2; i < arrayMax(tokens) - 1; i += 2) {
-      int len = atoi(textItem(tokens, i));
-      int intronic = atoi(textItem(tokens, i - 1));
-      pos += intronic + 1;
-      printf(",%s:%c:%d:%d:%d:%d",
-             entry->rname, mrf_strand, pos, pos + len - 1, q, q + len - 1);
-      pos += len - 1;
-      q += len;
+  // Print alignment blocks.
+  char mrf_strand = samStrandToMrfStrand(sam_entry, sam_strand);
+  int target_start = sam_entry->pos;
+  int query_start = 1;
+  bool first = true;
+  for (int i = 0; i < arrayMax(cigar_operations); ++i) {
+    CigarOperation* op = arrp(cigar_operations, i, CigarOperation);
+    switch (op->type) {
+      case kCigarAlignmentMatch: {
+        int target_end = target_start + op->length - 1;
+        int query_end = query_start + op->length - 1;
+        printf("%s%s:%c:%d:%d:%d:%d",
+               (first == false) ? "," : "",
+               sam_entry->rname, mrf_strand, target_start, target_end,
+               query_start, query_end);
+        target_start += op->length - 1;
+        query_start += op->length;
+        break;
+      }
+      case kCigarSkippedRegion: {
+        target_start += op->length = 1;
+        break;
+      }
     }
+    first = false;
   }
 
-  textDestroy(tokens);
+  arrayDestroy(cigar_operations);
 }
 
 int generateSamEntry(Texta tokens, SamEntry *currSamE, int* hasSeqs, 
