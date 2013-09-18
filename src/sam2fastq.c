@@ -14,14 +14,6 @@
  *   \file sam2fastq.c Program to convert SAM paired end files to FASTQ
  */
 
-
-
-#define R_FIRST		0
-#define R_SECOND	1
-
-
-
-
 void writeSamToFastq( SamEntry *r1, int end ) {
   
 }

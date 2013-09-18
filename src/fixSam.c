@@ -16,9 +16,6 @@
  *      alignments and also be sorted by read name.
  */
 
-#define R_FIRST         0
-#define R_SECOND        1
-
 void fixSingleEnd(SamEntry *currSamE) {
   if ((currSamE->flags & S_QUERY_UNMAPPED) &&
       !(strEqual(currSamE->rname, "*"))) {

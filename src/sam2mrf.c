@@ -17,9 +17,6 @@
  *   \file sam2mrf.c Module to convert SAM to MRF.
  */
 
-#define R_FIRST     0
-#define R_SECOND    1
-
 static char samStrandToMrfStrand(SamEntry* sam_entry, char sam_strand) {
   char mrf_strand = '.';
   if (sam_strand == R_FIRST) {
