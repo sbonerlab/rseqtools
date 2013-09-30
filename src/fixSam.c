@@ -16,50 +16,50 @@
  *      alignments and also be sorted by read name.
  */
 
-void fixSingleEnd(SamEntry *currSamE) {
-  if ((currSamE->flags & S_QUERY_UNMAPPED) &&
-      !(strEqual(currSamE->rname, "*"))) {
-    currSamE->flags -= S_QUERY_UNMAPPED;
+void fixSingleEnd(SamEntry *entry) {
+  if ((entry->flags & S_QUERY_UNMAPPED) &&
+      !(strEqual(entry->rname, "*"))) {
+    entry->flags -= S_QUERY_UNMAPPED;
   }
-  if ((currSamE->flags & S_MATE_UNMAPPED) && 
-      !(strEqual(currSamE->mrnm, "*"))) {
-    currSamE->flags -= S_MATE_UNMAPPED;
+  if ((entry->flags & S_MATE_UNMAPPED) && 
+      !(strEqual(entry->mrnm, "*"))) {
+    entry->flags -= S_MATE_UNMAPPED;
   }
                                                
-  if (strEqual(currSamE->mrnm, "*") && 
-      !(currSamE->flags & S_MATE_UNMAPPED)) {
-    currSamE->flags += S_MATE_UNMAPPED;
-    if (currSamE->flags & S_PAIR_MAPPED) {
-      currSamE->flags -= S_PAIR_MAPPED;
+  if (strEqual(entry->mrnm, "*") && 
+      !(entry->flags & S_MATE_UNMAPPED)) {
+    entry->flags += S_MATE_UNMAPPED;
+    if (entry->flags & S_PAIR_MAPPED) {
+      entry->flags -= S_PAIR_MAPPED;
     }
-    if (currSamE->flags & S_MATE_STRAND) {
-      currSamE->flags -= S_MATE_STRAND;
+    if (entry->flags & S_MATE_STRAND) {
+      entry->flags -= S_MATE_STRAND;
     }
   }
   // removing /1 or /2 in the read name
-  char *pos = strchr(currSamE->qname, '/');
+  char *pos = strchr(entry->qname, '/');
   if (pos != NULL) {
-    if ((currSamE->flags & S_FIRST) && 
-        (currSamE->flags & S_SECOND)) {
+    if ((entry->flags & S_FIRST) && 
+        (entry->flags & S_SECOND)) {
       if (strEqual(pos, "/1")) {
-              currSamE->flags -= S_SECOND ;
+        entry->flags -= S_SECOND ;
       } else {
-              currSamE->flags -= S_FIRST ;
+        entry->flags -= S_FIRST ;
       }
     }
-    if (!(currSamE->flags & S_FIRST) && 
-        !(currSamE->flags & S_SECOND)) {
-             if (strEqual( pos, "/1")) { 
-        currSamE->flags -= S_SECOND;
+    if (!(entry->flags & S_FIRST) && 
+        !(entry->flags & S_SECOND)) {
+      if (strEqual( pos, "/1")) { 
+        entry->flags -= S_SECOND;
       } else {
-        currSamE->flags -= S_FIRST;
+        entry->flags -= S_FIRST;
       }
       *pos='\0';
     }
   }
-  if ((currSamE->flags & S_QUERY_UNMAPPED) && 
-      (currSamE->flags & S_NOT_PRIMARY)) {
-    currSamE->flags -= S_NOT_PRIMARY; 
+  if ((entry->flags & S_QUERY_UNMAPPED) && 
+      (entry->flags & S_NOT_PRIMARY)) {
+    entry->flags -= S_NOT_PRIMARY; 
   }
 }
 
@@ -97,7 +97,7 @@ void fixPairedEnds(SamEntry *r1, SamEntry *r2) {
 
   if (strEqual(r1->rname, r2->rname)) {
     r1->isize = r1->pos - r2->pos;
-    r2->isize = -1*r1->isize;
+    r2->isize = -1 * r1->isize;
   }
   if (!(r1->flags & S_READ_PAIRED)) {
     r1->flags += S_READ_PAIRED;
@@ -120,88 +120,86 @@ void fixPairedEnds(SamEntry *r1, SamEntry *r2) {
 }
 
 int main (int argc, char **argv) {
-  char* pos;
-  SamEntry *currSamE = NULL;
-  SamEntry *mateSamE = NULL;
-  SamEntry *tmpSamE = NULL;
+  SamEntry *mate_entry = NULL;
+  SamEntry *tmp_entry = NULL;
   SamEntry *r1 = NULL;
   SamEntry *r2 = NULL;
   SamEntry *r3 = NULL;
-  short unsigned int flag = 1;
 
-  samParser_initFromFile("-");
-  while (tmpSamE = samParser_nextEntry()) {
-    samParser_freeEntry(currSamE);
-    currSamE = NULL;
-    
-    samParser_copyEntry(&currSamE, tmpSamE);
-    fixSingleEnd(currSamE);
-    tmpSamE = samParser_nextEntry();
-    if (!tmpSamE) {
+  SamParser* parser = samparser_from_file("-");
+  for (SamEntry* tmp_entry = NULL; tmp_entry = samparser_next_entry(parser); ) {
+    samentry_free(entry);
+    entry = NULL;
+   
+    samentry_copy(&entry, tmp_entry);
+    fix_single_end(entry);
+    tmp_entry = samparser_next_entry(parser);
+    if (tmp_entry == NULL) {
       break;
     }
-    samParser_freeEntry(mateSamE);
-    mateSamE = NULL; 
+    samentry_free(mate_entry);
+    mate_entry = NULL; 
     
-    samParser_copyEntry(&mateSamE, tmpSamE);
-    fixSingleEnd(mateSamE);
-    if (strEqual(currSamE->qname, mateSamE->qname)) {
-      fixPairedEnds(currSamE, mateSamE);
-      printf("%s\n", samParser_writeEntry(currSamE));
-      printf("%s\n", samParser_writeEntry(mateSamE));
+    samentry_copy(&mate_entry, tmp_entry);
+    fix_single_end(mate_entry);
+    if (strEqual(entry->qname, mate_entry->qname)) {
+      fix_paired_ends(entry, mate_entry);
+      printf("%s\n", samentry_to_string(entry));
+      printf("%s\n", samentry_to_string(mate_entry));
       if (r1) {
-        samParser_freeEntry(r1); 
+        samentry_free(r1); 
         r1 = NULL;
       }
       if (r2) {
-        samParser_freeEntry(r2); 
+        samentry_free(r2); 
         r2 = NULL;
       }
       if (r3) {
-        samParser_freeEntry(r3); 
+        samentry_free(r3); 
         r3 = NULL;
       }
       continue;
     } 
     if (r1 == NULL) {
-      samParser_copyEntry(&r1, mateSamE);
+      samentry_copy(&r1, mate_entry);
       if (r3) {
-        if (strEqual(r3->qname, currSamE->qname)) {
-          fixPairedEnds(r3, currSamE);
-          printf("%s\n", samParser_writeEntry(r3));
-          printf("%s\n", samParser_writeEntry(currSamE));
-          samParser_freeEntry(r3);
+        if (strEqual(r3->qname, entry->qname)) {
+          fix_paired_ends(r3, entry);
+          printf("%s\n", samentry_to_string(r3));
+          printf("%s\n", samentry_to_string(entry));
+          samentry_free(r3);
           r3 = NULL;
           continue;
         } else {
-          samParser_freeEntry(r3); 
+          samentry_free(r3); 
           r3 = NULL;
         }
       }
       continue;
     } else if (r2 == NULL) {
-      samParser_copyEntry(&r2, currSamE);
-      samParser_copyEntry(&r3, mateSamE);
+      samentry_copy(&r2, entry);
+      samentry_copy(&r3, mate_entry);
     }    
-    if (r1->qname && r2->qname) {
+    if (r1->qname != NULL && r2->qname != NULL) {
       if (strEqual(r1->qname, r2->qname)) {
-        fixPairedEnds(r1, r2);
-        printf("%s\n", samParser_writeEntry(r1));
-        printf("%s\n", samParser_writeEntry(r2));
-        samParser_freeEntry(r1);
+        fix_paired_ends(r1, r2);
+        printf("%s\n", samentry_to_string(r1));
+        printf("%s\n", samentry_to_string(r2));
+        samentry_free(r1);
         r1 = NULL;
-        samParser_freeEntry(r2);
+        samentry_free(r2);
         r2 = NULL;
       }
     }   
   }
   if (r1 != NULL) { 
-    samParser_freeEntry(r1); 
+    samentry_free(r1); 
     r1 = NULL;
   }
   if (r2) {
-    samParser_freeEntry(r2); 
+    samentry_free(r2); 
     r2 = NULL;
   }
-  samParser_deInit();
+  samparser_free(parser);
+  return EXIT_SUCCESS;
 }

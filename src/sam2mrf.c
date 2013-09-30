@@ -15,7 +15,7 @@
 #include <mrf/mrf.h>
 #include <mrf/sam.h>
 
-static char samStrandToMrfStrand(SamEntry* sam_entry, char sam_strand) {
+static char sam_strand_to_mrf_strand(SamEntry* sam_entry, char sam_strand) {
   char mrf_strand = '.';
   if (sam_strand == R_FIRST) {
     if (sam_entry->flags & S_QUERY_STRAND) {
@@ -33,13 +33,12 @@ static char samStrandToMrfStrand(SamEntry* sam_entry, char sam_strand) {
   return mrf_strand;
 }
 
-static void printMrfAlignBlocks(SamEntry *sam_entry, int sam_strand) {
+static void print_mrf_align_blocks(SamEntry *sam_entry, int sam_strand) {
   // Parse CIGAR string.
-  // TODO: CIGAR should be parsed when SAM entry is parsed.
   Array cigar_operations = sam_entry->cigar_ops;
 
   // Print alignment blocks.
-  char mrf_strand = samStrandToMrfStrand(sam_entry, sam_strand);
+  char mrf_strand = sam_strand_to_mrf_strand(sam_entry, sam_strand);
   int target_start = sam_entry->pos;
   int query_start = 1;
   bool first = true;
@@ -66,239 +65,143 @@ static void printMrfAlignBlocks(SamEntry *sam_entry, int sam_strand) {
   }
 }
 
-int generateSamEntry(Texta tokens, SamEntry *sam_entry, int* has_seqs, 
-                     int* has_qual) {
-  sam_entry->qname = strdup(textItem(tokens, 0));
-  sam_entry->flags = atoi(textItem(tokens, 1));
-  sam_entry->rname = strdup(textItem(tokens, 2));
-  sam_entry->pos   = atoi(textItem(tokens, 3));
-  sam_entry->mapq  = atoi(textItem(tokens, 4));
-  sam_entry->cigar = strdup(textItem(tokens, 5));
-  sam_entry->mrnm  = strdup(textItem(tokens, 6));
-  sam_entry->mpos  = atoi(textItem(tokens, 7));
-  sam_entry->isize = atoi(textItem(tokens, 8));
-  sam_entry->seq   = NULL;
-  sam_entry->qual  = NULL;
-  sam_entry->tags  = NULL;
-
-#if 0
-  // Debug only
-  printf("READ_PAIRED:\t%s\nPAIR_MAPPED:\t%s\nQUERY_UNMAPPED:\t%s\nMATE_UNMAPPED:\t%s\nQUERY_STRAND:\t%s\nMATE_STRAND:\t%s\nFIRST:\t\t%s\nSECOND:\t\t%s\nNOT_PRIMARY:\t%s\nFAILS_CHECK:\t%s\nDUPLICATE:\t%s\n", 
-         (sam_entry->flags & S_READ_PAIRED)?"paired":"single",
-         (sam_entry->flags & S_PAIR_MAPPED)?"yes":"no",
-         (sam_entry->flags & S_QUERY_UNMAPPED)?"unmapped":"mapped",
-         (sam_entry->flags & S_MATE_UNMAPPED)?"unmapped":"mapped",
-         (sam_entry->flags & S_QUERY_STRAND)?"forward":"reverse",
-         (sam_entry->flags & S_MATE_STRAND)?"forward":"reverse",
-         (sam_entry->flags & S_FIRST)?"yes":"no",
-         (sam_entry->flags & S_SECOND)?"yes":"no",
-         (sam_entry->flags & S_NOT_PRIMARY)?"yes":"no",
-         (sam_entry->flags & S_FAILS_CHECKS)?"yes":"no",
-         (sam_entry->flags & S_DUPLICATE)?"yes":"no" );
-#endif
-
-  // Skip if unmapped or fails platform/vendor checks
-  if (sam_entry->flags & S_QUERY_UNMAPPED ||
-      sam_entry->flags & S_MATE_UNMAPPED ||
-      sam_entry->flags & S_FAILS_CHECKS || 
-      sam_entry->flags & S_NOT_PRIMARY) {
-    return 0;
+void print_headers(bool has_seqs, bool has_qual) {
+  printf("%s", MRF_COLUMN_NAME_BLOCKS);
+  if (has_seqs) {
+    printf("\t%s", MRF_COLUMN_NAME_SEQUENCE);
   }
-
-  // Get tokens
-  if (arrayMax(tokens) > 11) {
-    Stringa tags = stringCreate(10);
-    for (int j = 11; j < arrayMax(tokens); j++) {
-      if (j > 11) {
-        stringAppendf(tags, "\t");
-      }
-      stringAppendf(tags, "%s", textItem(tokens, j));
-    }
-    sam_entry->tags = strdup(string(tags));
-    stringDestroy(tags);
+  if (has_qual) {
+    printf("\t%s", MRF_COLUMN_NAME_QUALITY_SCORES);
   }
-
-  if (strcmp(textItem(tokens, 9),  "*") != 0) {
-    *has_seqs = 1;
-    sam_entry->seq = strdup(textItem(tokens, 9));
-  }
-  if (strcmp(textItem(tokens, 10), "*") != 0) {
-    *has_qual = 1;
-    sam_entry->qual = strdup(textItem(tokens, 10));
-  }
-  return 1;
-}
-
-int haveSameName(SamEntry *query, SamEntry *mate, char delim) {
-  char* pos = strchr(query->qname, delim);
-  if (*pos != '\0') {
-    *pos='\0';
-  }
-  pos = strchr(mate->qname, delim);
-  if (*pos != '\0') {
-    *pos='\0';
-  }
-  return strEqual(query->qname, mate->qname);
+  printf("\t%s\n", MRF_COLUMN_NAME_QUERY_ID);
 }
 
 int sam_to_mrf(char* delim) {
-  LineStream ls = ls_createFromFile("-");
-  ls_bufferSet(ls, 1);
-  char *line = NULL;
-  int start = 1;
-  while (line = ls_nextLine(ls)) {
-    // Put all the lines of the SAM header in comments
-    if (line[0] == '@') {
-      printf("# %s\n", line);
-      continue;
-    }
-    // Parse each SAM entry and store into array   
-    Texta tokens = textFieldtokP(line, "\t");
-    if (isValidSamLine(tokens) != 1) {
-      ls_destroy(ls);
-      die("Invalid SAM entry: %s", line);
-    }
- 
-    SamEntry *currSamE = NULL;
-    SamEntry *mateSamE = NULL;
-    AllocVar(currSamE);
+  SamParser* parser = samparser_from_file("-");
+  Array comments = samparser_get_comments(parser);
+  for (int i = 0; i < arrayMax(comments); ++i) {
+    char* comment = arru(comments, i, char*);
+    printf("# %s\n", comment);
+  }
 
-    int hasQual = 0;
-    int hasSeqs = 0;
-    int ret = generateSamEntry(tokens, currSamE, &hasSeqs, &hasQual);
-    textDestroy(tokens);
-    if (ret == 0) {
-      if (isPaired(currSamE)) { 
-        // only if paired, discard next entry too (the mate) if same name
-        line = ls_nextLine(ls); 
-        if (ls_isEof(ls)) {
-          destroySamEntry(currSamE);
-          freeMem(currSamE);
-          continue;         
-        }
-        tokens = textFieldtokP(line, "\t");
-        if (isValidSamLine(tokens) != 1) {
-          ls_destroy(ls);
-          die("Invalid SAM entry: %s", line);
-        }
-        AllocVar(mateSamE);
-        ret = generateSamEntry(tokens, mateSamE, &hasSeqs, &hasQual); 
-        // it's part of another pair
-        if (!haveSameName(currSamE, mateSamE, delim)) {
-          ls_back(ls, 1); // reloading the line
-        }
-        destroySamEntry(mateSamE);
-        freeMem(mateSamE);
-      }
-      destroySamEntry(currSamE);
-      freeMem(currSamE);
-      continue;
-    }   
-    if (isPaired(currSamE)) {
-      int hasQual2, hasSeq2;
-      AllocVar(mateSamE);
-      Texta secondEnd = NULL;
-      secondEnd = textFieldtok(ls_nextLine(ls), "\t");
-      ret = generateSamEntry(secondEnd, mateSamE, &hasSeq2, &hasQual2);
-      textDestroy(secondEnd);
-      // This should have been taken care already with the analysis of the 
-      // first end.
-      if (ret == 0) { 
-        destroySamEntry(currSamE);
-        destroySamEntry(mateSamE);
-        freeMem(currSamE);
-        freeMem(mateSamE);
+  bool first = true;
+  bool has_seqs = false;
+  bool has_qual = false;
+  for (SamEntry* entry = NULL; entry = samparser_next_entry(parser); ) {
+    SamEntry* mate_entry = NULL;
+    // If entry is not valid, skip it. If it is the first of a pair, then make
+    // sure that the mate entry is skipped as well.
+    if (!samentry_is_vaid(entry)) {
+      if (!samentry_is_paired(entry)) {
+        samentry_free(entry);
         continue;
       }
-      
-      if (!haveSameName(currSamE, mateSamE, delim)) {
+      mate_entry = samparser_next_entry(parser);
+      if (mate_entry == NULL) {
+        samentry_free(entry);
+        break;
+      }
+      if (!samentry_same_name(entry, mate_entry, delim)) {
+        samparser_back(1);
+      }
+      samentry_free(entry);
+      samentry_free(mate_entry);
+      continue;
+    }
+
+    // If entry is the first of a paired-end, then attempt to read then next 
+    // entry and validate that it is the mate of the entry.
+    if (samentry_is_paired(entry)) {
+      mate_entry = samparser_next_entry(parser);
+      if (mate_entry == NULL || !samentry_is_valid(mate_entry)) {
+        samentry_free(entry);
+        if (mate_entry != NULL) {
+          samentry_free(mate_entry);
+        }
+        continue;
+      }
+      if (!samentry_same_name(entry, mate_entry, delim)) {
         die("Please note that for paired-end data, sam2mrf requires the mate "
             "pairs to be on subsequent lines. You may want to sort the SAM "
             "file first.\nEx: sort -r file.sam | sam2mrf > file.mrf\n");
       }
-    } 
-
-    // Print MRF headers
-    if (start) {
-      printf("%s", MRF_COLUMN_NAME_BLOCKS);
-      if (hasSeqs) {
-        printf("\t%s", MRF_COLUMN_NAME_SEQUENCE);
-      }
-      if (hasQual) {
-        printf("\t%s", MRF_COLUMN_NAME_QUALITY_SCORES);
-      }
-      printf("\t%s\n", MRF_COLUMN_NAME_QUERY_ID);
-      start = 0;
     }
-    
-    // Print AlignmentBlocks   
-    printMrfAlignBlocks(currSamE, R_FIRST);
-    if (isPaired(currSamE)) {  
+
+    // If this is the first entry, print the MRF headers. Note that we must
+    // check whether the entries have the optional sequence and quality score
+    // fields in order to print the correct headers.
+    if (start == true) {
+      has_seqs = samentry_has_seqs(entry);
+      has_qual = samentry_has_qual(entry);
+      print_headers(has_seqs, has_qual);
+      start = false;
+    }
+
+    // Print MRF AlignmentBlocks.
+    print_mrf_alignment_blocks(entry, R_FIRST);
+    if (samentry_is_paired(entry)) {
       printf("|");
-      printMrfAlignBlocks(mateSamE, R_SECOND);
+      print_mrf_alignment_blocks(mate_entry, R_SECOND);
     }
 
-    seq_init();
-    // Print Sequence
-    if (hasSeqs) {
-      if (!currSamE->seq) {
-        die ("Entry missing sequence column\n");
+    // Print sequence(s) if available.
+    if (has_seqs == true) {
+      seq_init();
+      if (!samentry_has_seqs(entry)) {
+        die("Entry missing sequence column\n");
       }
-      if (currSamE->flags & S_QUERY_STRAND) {
-        seq_reverseComplement(currSamE->seq, strlen(currSamE->seq));
+      if (entry->flags & S_QUERY_STRAND) {
+        seq_reverseComplement(entry->seq, strlen(entry->seq));
       }
-      printf("\t%s", currSamE->seq);
-      if (mateSamE) {
-        if (!mateSamE->seq) {
-          die("Entry missing sequence column\n");
+      printf("\t%s", entry->seq);
+      if (mate_entry != NULL) {
+        if (!samentry_has_seqs(mate_entry)) {
+          die("Mate entry missing sequence column\n");
         }
-        if (mateSamE->flags & S_MATE_STRAND) {
-          seq_reverseComplement(mateSamE->seq, strlen(mateSamE->seq));
+        if (mate_entry->flags & S_MATE_STRAND) {
+          seq_reverseComplement(mate_entry->seq, strlen(mate_entry->seq));
         }
-        printf("|%s", mateSamE->seq);
-      }
-    }
-    // Print quality scores
-    if (hasQual) {
-      if (!currSamE->qual) {
-        die("Entry missing quality scores column\n");
-      }
-      printf("\t%s", currSamE->qual);
-      if (mateSamE) {
-        if (!mateSamE->qual)
-          die("Entry missing quality scores column\n");
-        printf("|%s", mateSamE->qual);
+        printf("|%s", mate_entry->seq);
       }
     }
 
-    // Print queryID
-    if (mateSamE) {
-      // No need to print out both IDs, but need the pipe symbol for 
-      // consistency.
-      printf("\t%s|%s", currSamE->qname,"2"); 
+    // Print quality score(s) if available.
+    if (has_qual == true) {
+      if (!samentry_has_qual(entry)) {
+        die("Entry missing quality scores column");
+      }
+      printf("\t%s", entry->qual);
+      if (mate_entry != NULL) {
+        if (!samentry_has_qual(mate_entry)) {
+          die("Mate entry missing quality scores column");
+        }
+        printf("|%s", mate_entry->qual);
+      }
+    }
+
+    // Print queryID.
+    if (mate_entry == NULL) {
+      printf("\t%s", entry->qname);
     } else {
-      printf("\t%s", currSamE->qname);
+      // We don't need to print out both IDs, but we need the pipe symbol for
+      // consistency.
+      printf("\t%s|%s", entry->qname, "2");
     }
-    printf("\n");
-    
-    destroySamEntry(currSamE);
-    freeMem(currSamE); 
-    if (isPaired(currSamE)) {
-      destroySamEntry(mateSamE);
-      freeMem(mateSamE);
+
+    samentry_free(entry);
+    if (mate_entry != NULL) {
+      samentry_free(mate_entry);
     }
   }
-  // clean up
-  ls_destroy(ls);
+  samparser_free(parser);
   return EXIT_SUCCESS;
 }
 
-int main (int argc, char **argv) {
+int main(int argc, char **argv) {
   char delim = '\0';
   if (argc == 2) {
     delim = argv[1][0];
   }
-
   return sam_to_mrf(delim);
 }
 

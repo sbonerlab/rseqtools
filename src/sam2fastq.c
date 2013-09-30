@@ -14,28 +14,25 @@
  *   \file sam2fastq.c Program to convert SAM paired end files to FASTQ
  */
 
-void writeSamToFastq( SamEntry *r1, int end ) {
+void writeSamToFastq(SamEntry *r1, int end) {
   
 }
 
-int main (int argc, char **argv)
-{
-
-  char* pos;
-  SamEntry *currSamE = NULL;
-
-  samParser_initFromFile("-");
-  while( currSamE = samParser_nextEntry() ) {
-    char *pos = strchr( currSamE->qname, '/'); // checking /1 or /2 in the read name
-    if( pos != NULL ) {
-      if( !( currSamE->flags & S_FIRST) && !( currSamE->flags & S_SECOND ) ) {
-	if( strEqual( pos, "/1") ) {
-	  writeSamToFastq( currEntry, 1);
-	} else 	  {
-	  writeSamToFastq( currEntry, 2);
-	}
+int main (int argc, char **argv) {
+  SamParser* parser = samParser_initFromFile("-");
+  for (SamEntry* entry = NULL; entry = samparser_next_entry(parser); ) {
+    char *pos = strchr(entry->qname, '/'); // checking /1 or /2 in the read name
+    if (pos != NULL) {
+      if (!(entry->flags & S_FIRST) && !(entry->flags & S_SECOND)) {
+        if (strEqual(pos, "/1") ) {
+          writeSamToFastq(currEntry, 1);
+        } else {
+          writeSamToFastq(currEntry, 2);
+        }
       }
-    } else die("Error");
+    } else {
+      die("Error");
+    }
   }
-  samParser_deInit();
+  samparser_free(parser);
 }
