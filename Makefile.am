@@ -1,6 +1,7 @@
 AM_MAKEFLAGS = --no-print-directory
 AM_CPPFLAGS = -I${top_srcdir}/src
 AM_CFLAGS = -std=c99
+ACLOCAL_AMFLAGS = -I m4
 
 
 bin_PROGRAMS = \
@@ -136,3 +137,8 @@ src_mrfSorter_LDADD = -lmrf -lm -lbios
 
 src_fixSam_SOURCES = src/fixSam.c
 src_fixSam_LDADD = -lmrf -lm -lbios
+
+debug:
+	$(MAKE) "CFLAGS=-g -DDEBUG " all $(AM_MAKEFILE)
+
+
