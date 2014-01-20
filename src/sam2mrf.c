@@ -15,30 +15,13 @@
 #include <mrf/mrf.h>
 #include <mrf/sam.h>
 
-static char sam_strand_to_mrf_strand(SamEntry* sam_entry, char sam_strand) {
-  char mrf_strand = '.';
-  if (sam_strand == R_FIRST) {
-    if (sam_entry->flags & S_QUERY_STRAND) {
-      mrf_strand = '-';
-    } else {
-      mrf_strand = '+';
-    }
-  } else {
-    if (sam_entry->flags & S_MATE_STRAND) {
-      mrf_strand = '-';
-    } else {
-      mrf_strand = '+';
-    }
-  }
-  return mrf_strand;
-}
-
 static void print_mrf_alignment_blocks(SamEntry *sam_entry, int sam_strand) {
   // Parse CIGAR string.
   Array cigar_operations = sam_entry->cigar_ops;
+  char mrf_strand = '.'; 
 
   // Print alignment blocks.
-  char mrf_strand = sam_strand_to_mrf_strand(sam_entry, sam_strand);
+  if( sam_entry->flags & S_QUERY_STRAND ) mrf_strand = '-'; else mrf_strand = '+';
   int target_start = sam_entry->pos;
   int query_start = 1;
   int query_end = query_start;
@@ -136,9 +119,7 @@ int sam_to_mrf(char delim) {
       }
     }
     
-    // If this is the first entry, print the MRF headers. Note that we must
-    // check whether the entries have the optional sequence and quality score
-    // fields in order to print the correct headers. Assuming that all SAM files have sequence and quals
+    // If this is the first entry, print the MRF headers. Note that we assume that all SAM files have sequence and quality scores
     if (first == true) {
       has_seqs = true; //samentry_has_seqs(entry);
       has_qual = true; //samentry_has_qual(entry);
@@ -156,17 +137,11 @@ int sam_to_mrf(char delim) {
     // Print sequence(s) if available.
     if (has_seqs == true) {
       seq_init();
-      /*if (!samentry_has_seqs(entry)) { // assuming it's present
-        die("Entry missing sequence column\n");
-	}*/
       if (entry->flags & S_QUERY_STRAND) {
         seq_reverseComplement(entry->seq, strlen(entry->seq));
       }
       printf("\t%s", entry->seq);
       if (mate_entry != NULL) {
-        /*if (!samentry_has_seqs(mate_entry)) {
-          die("Mate entry missing sequence column\n");
-	  }*/
         if (mate_entry->flags & S_MATE_STRAND) {
           seq_reverseComplement(mate_entry->seq, strlen(mate_entry->seq));
         }
@@ -176,14 +151,8 @@ int sam_to_mrf(char delim) {
 
     // Print quality score(s) if available.
     if (has_qual == true) {
-      /*if (!samentry_has_qual(entry)) {
-        die("Entry missing quality scores column");
-	}*/
       printf("\t%s", entry->qual);
       if (mate_entry != NULL) {
-        /*if (!samentry_has_qual(mate_entry)) {
-          die("Mate entry missing quality scores column");
-	  }*/
         printf("|%s", mate_entry->qual);
       }
     }
