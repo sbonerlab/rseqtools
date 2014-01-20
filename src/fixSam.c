@@ -16,7 +16,7 @@
  *      alignments and also be sorted by read name.
  */
 
-void fixSingleEnd(SamEntry *entry) {
+void fix_single_end(SamEntry *entry) {
   if ((entry->flags & S_QUERY_UNMAPPED) &&
       !(strEqual(entry->rname, "*"))) {
     entry->flags -= S_QUERY_UNMAPPED;
@@ -63,7 +63,7 @@ void fixSingleEnd(SamEntry *entry) {
   }
 }
 
-void fixPairedEnds(SamEntry *r1, SamEntry *r2) {
+void fix_paired_ends(SamEntry *r1, SamEntry *r2) {
   if ((r1->flags & S_MATE_UNMAPPED) && !(r2->flags & S_QUERY_UNMAPPED)) {
     r1->flags -= S_MATE_UNMAPPED;
     r1->mrnm = hlr_strdup(r2->rname);
@@ -128,8 +128,8 @@ int main (int argc, char **argv) {
 
   SamParser* parser = samparser_from_file("-");
   for (SamEntry* tmp_entry = NULL; tmp_entry = samparser_next_entry(parser); ) {
-    samentry_free(entry);
-    entry = NULL;
+    //samentry_free(tmp_entry);
+    SamEntry* entry = NULL;
    
     samentry_copy(&entry, tmp_entry);
     fix_single_end(entry);
