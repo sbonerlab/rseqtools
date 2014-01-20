@@ -93,8 +93,8 @@ static void printSamE (MrfEntry *entry, int i)
 
     pos1 = block1->targetStart;
     pos2 = block2->targetStart;
-    cigar1 = genCigar(&(entry->read1));
-    cigar2 = genCigar(&(entry->read2));
+    cigar1 = samparser_mrfread_to_cigar(&(entry->read1));
+    cigar2 = samparser_mrfread_to_cigar(&(entry->read2));
     rname1 = strdup(block1->targetName);
     rname2 = strdup(block2->targetName);
 
@@ -169,7 +169,7 @@ static void printSamE (MrfEntry *entry, int i)
 
     MrfBlock *block = arrp (entry->read1.blocks, 0, MrfBlock);
 
-    cigar = genCigar(&(entry->read1));
+    cigar = samparser_mrfread_to_cigar(&(entry->read1));
     pos = block->targetStart;
     if (block->strand == '+') flags |= S_QUERY_STRAND;
 
