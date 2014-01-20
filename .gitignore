@@ -64,3 +64,4 @@ src/mrfCountRegion
 src/mrfSubsetByGenes
 src/mrfSorter
 src/fixSam
+src/bgrQuantifier
