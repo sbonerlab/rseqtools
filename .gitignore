@@ -7,6 +7,7 @@
 .deps
 .libs/
 libmrf.*
+bin/
 
 Makefile
 Makefile.in
@@ -56,3 +57,10 @@ src/intervalSize
 src/bed2interval
 src/interval2bed
 src/mrf2sam
+src/sam2mrf
+src/mrfValidate
+src/bgrSegmenter
+src/mrfCountRegion
+src/mrfSubsetByGenes
+src/mrfSorter
+src/fixSam
