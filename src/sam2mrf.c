@@ -68,14 +68,6 @@ void print_headers(bool has_seqs, bool has_qual) {
 
 int sam_to_mrf(char delim) {
   SamParser* parser = samparser_from_file("-");
-  Array comments = samparser_get_comments(parser);
-  if( comments != NULL ) {
-    for (int i = 0; i < arrayMax(comments); ++i) {
-      char* comment = arru(comments, i, char*);
-      printf("# %s\n", comment);
-    }
-  }
-
   bool first = true;
   bool has_seqs = false;
   bool has_qual = false;
@@ -118,7 +110,15 @@ int sam_to_mrf(char delim) {
             "file first.\nEx: sort -r file.sam | sam2mrf > file.mrf\n");
       }
     }
-    
+    // If this is the first entry, print the comments, if any, before the MRF headers.
+    Array comments = samparser_get_comments(parser);
+    if( comments != NULL ) {
+      for (int i = 0; i < arrayMax(comments); ++i) {
+	char* comment = arru(comments, i, char*);
+	printf("# %s\n", comment);
+      }
+    }
+
     // If this is the first entry, print the MRF headers. Note that we assume that all SAM files have sequence and quality scores
     if (first == true) {
       has_seqs = true; //samentry_has_seqs(entry);
