@@ -59,7 +59,7 @@ static void print_mrf_alignment_blocks(SamEntry *sam_entry, int sam_strand) {
         break;
       }
       case kCigarSkippedRegion: {
-        target_start += op->length - 1;
+        target_start += op->length;
         break;
       }
       case kCigarSoftClipping: {
